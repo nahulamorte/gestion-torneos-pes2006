@@ -447,20 +447,54 @@ function jugadoresSancionadosParaSlot(personaId, slot){
 }
 
 
+function generarFixtureCompleto(){
+  if(roster.length < 2) return [];
+
+  const maxSemanas = roster.reduce((max, persona) => {
+    return Math.max(max, semanasDePersona(persona.id).length);
+  }, 0);
+
+  const semanas = [];
+  for(let i = 0; i < maxSemanas; i++){
+    const vistos = new Set();
+    const partidosSemana = [];
+
+    roster.forEach(persona => {
+      const rivales = semanasDePersona(persona.id)[i] || [];
+      rivales.forEach(rival => {
+        const key = [persona.id, rival.id].slice().sort().join('|');
+        if(vistos.has(key)) return;
+        vistos.add(key);
+        partidosSemana.push({ personaAId: persona.id, personaBId: rival.id });
+      });
+    });
+
+    semanas.push(partidosSemana);
+  }
+
+  return semanas;
+}
+
+function partidoEntre(personaAId, personaBId){
+  return partidos.find(m =>
+    (m.personaAId === personaAId && m.personaBId === personaBId) ||
+    (m.personaAId === personaBId && m.personaBId === personaAId)
+  ) || null;
+}
+
 function renderFechas(){
   refreshUserBar();
   const cont = document.getElementById('fechasSemanas');
   const label = document.getElementById('fechasViendoLabel');
-  const personaId = document.getElementById('activeUserSelect').value;
 
-  if(roster.length === 0 || !personaId){
+  if(roster.length < 2){
     label.textContent = '';
-    cont.innerHTML = `<p class="empty-note">No hay participantes cargados todavía. Andá a la pestaña Sorteo.</p>`;
+    cont.innerHTML = `<p class="empty-note">No hay suficientes participantes para armar el fixture completo.</p>`;
     return;
   }
 
-  label.textContent = 'Fixture de ' + personaNombre(personaId);
-  const semanas = semanasDePersona(personaId);
+  label.textContent = 'Fixture completo';
+  const semanas = generarFixtureCompleto();
   const idxActual = Math.min(semanaActualIndex(), Math.max(0, semanas.length - 1));
 
   if(semanas.length === 0){
@@ -468,46 +502,48 @@ function renderFechas(){
     return;
   }
 
-  cont.innerHTML = semanas.map((rivales, i) => {
+  cont.innerHTML = semanas.map((partidosSemana, i) => {
     const esActual = i === idxActual;
-    const filas = rivales.map((r, p) => {
-      const jugado = yaJugaron(personaId, r.id);
-      if(!jugado){
-        const sancionadosPropios = jugadoresSancionadosParaSlot(personaId, {semana:i, pos:p});
-        const ubicRival = ubicacionEnFixture(r.id, personaId);
-        const sancionadosRival = ubicRival ? jugadoresSancionadosParaSlot(r.id, ubicRival) : [];
-        const tags = [];
-        if(sancionadosPropios.length) tags.push(`<span class="resultado-chip" style="background:#ff8c00; color:#07130d;">🟥 ${escapeHtml(sancionadosPropios.join(', '))} no juega</span>`);
-        if(sancionadosRival.length) tags.push(`<span class="resultado-chip" style="background:#ff8c00; color:#07130d;">🚫 rival sin ${escapeHtml(sancionadosRival.join(', '))}</span>`);
+    const filas = partidosSemana.map(match => {
+      const a = personaById(match.personaAId) || { nombre: '(eliminado)', equipo: '—' };
+      const b = personaById(match.personaBId) || { nombre: '(eliminado)', equipo: '—' };
+      const partido = partidoEntre(match.personaAId, match.personaBId);
+
+      if(!partido){
         return `
           <div class="fixture-row pendiente">
-            <div>
-              <div class="fixture-main">vs ${escapeHtml(r.nombre)}</div>
-              <div class="fixture-sub">${escapeHtml(r.equipo)}</div>
+            <div class="fixture-main" style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+              <span>${escapeHtml(a.nombre)}</span>
+              <span style="color:var(--text-dim);">${escapeHtml(a.equipo)}</span>
+              <span class="resultado-chip" style="background:var(--line); color:var(--text-dim);">0</span>
+              <span>vs</span>
+              <span class="resultado-chip" style="background:var(--line); color:var(--text-dim);">0</span>
+              <span style="color:var(--text-dim);">${escapeHtml(b.equipo)}</span>
+              <span>${escapeHtml(b.nombre)}</span>
             </div>
-            <div style="display:flex; gap:6px; flex-wrap:wrap; justify-content:flex-end;">
-              <span class="resultado-chip" style="background:var(--line); color:var(--text-dim);">Por jugar</span>
-              ${tags.join('')}
-            </div>
+            <span class="resultado-chip" style="background:var(--line); color:var(--text-dim);">Por jugar</span>
           </div>
         `;
       }
-      const m = partidos.find(mm =>
-        (mm.personaAId === personaId && mm.personaBId === r.id) ||
-        (mm.personaBId === personaId && mm.personaAId === r.id)
-      );
-      const esA = m.personaAId === personaId;
-      const golesPropios = esA ? m.golesA : m.golesB;
-      const golesRival = esA ? m.golesB : m.golesA;
-      let resultado, chipClass;
-      if(golesPropios > golesRival){ resultado='Victoria'; chipClass='chip-v'; }
-      else if(golesPropios < golesRival){ resultado='Derrota'; chipClass='chip-d'; }
-      else { resultado='Empate'; chipClass='chip-e'; }
+
+      const esA = partido.personaAId === match.personaAId;
+      const golesA = esA ? partido.golesA : partido.golesB;
+      const golesB = esA ? partido.golesB : partido.golesA;
+
+      let resultado='Empate'; let chipClass='chip-e';
+      if(golesA > golesB){ resultado='Victoria'; chipClass='chip-v'; }
+      else if(golesA < golesB){ resultado='Derrota'; chipClass='chip-d'; }
+
       return `
         <div class="fixture-row jugado">
-          <div>
-            <div class="fixture-main">vs ${escapeHtml(r.nombre)}</div>
-            <div class="fixture-sub">${escapeHtml(r.equipo)} &nbsp;·&nbsp; Resultado: ${golesPropios} - ${golesRival}</div>
+          <div class="fixture-main" style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+            <span>${escapeHtml(a.nombre)}</span>
+            <span style="color:var(--text-dim);">${escapeHtml(a.equipo)}</span>
+            <span class="resultado-chip ${chipClass}" style="padding:3px 8px; min-width:28px; text-align:center;">${golesA}</span>
+            <span>vs</span>
+            <span class="resultado-chip ${chipClass}" style="padding:3px 8px; min-width:28px; text-align:center;">${golesB}</span>
+            <span style="color:var(--text-dim);">${escapeHtml(b.equipo)}</span>
+            <span>${escapeHtml(b.nombre)}</span>
           </div>
           <span class="resultado-chip ${chipClass}">${resultado}</span>
         </div>
