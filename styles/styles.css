@@ -327,31 +327,43 @@
     .subrow{grid-template-columns:1fr; gap:8px;}
     .roster-edit-row{grid-template-columns:1fr; gap:8px;}
 
-    /* ===== Tablas -> tarjetas en mobile ===== */
-    .table-responsive table thead{display:none;}
-    .table-responsive table, .table-responsive tbody, .table-responsive tr, .table-responsive td{
-      display:block; width:100%;
+    /* Mantener formato de tabla en mobile, sin cards: solo scroll horizontal */
+    .table-responsive{
+      overflow-x:auto;
+      -webkit-overflow-scrolling:touch;
+      scrollbar-width:thin;
     }
-    .table-responsive tr{
-      background:#08170f; border:1px solid var(--line); border-left:3px solid var(--gold);
-      border-radius:3px; margin-bottom:10px; padding:6px 12px;
-    }
-    .table-responsive tbody tr:hover{background:#08170f;}
+    .table-responsive table,
+    .table-responsive thead,
+    .table-responsive tbody,
+    .table-responsive tr,
+    .table-responsive th,
     .table-responsive td{
-      display:flex; align-items:flex-start; justify-content:space-between; gap:10px;
-      text-align:right; border-bottom:1px solid var(--line); padding:9px 0;
+      display:table; border-collapse:collapse; width:auto; min-width:100%;
     }
-    .table-responsive td:last-child{border-bottom:none;}
-    .table-responsive td.left{text-align:right;}
-    .table-responsive td::before{
-      content:attr(data-label); font-family:'Oswald',sans-serif; font-size:10.5px; letter-spacing:1px;
-      text-transform:uppercase; color:var(--gold-bright); text-align:left; margin-right:auto; flex-shrink:0; padding-top:2px;
+    .table-responsive thead{display:table-header-group;}
+    .table-responsive tbody{display:table-row-group;}
+    .table-responsive tr{display:table-row; background:transparent; border:none; margin:0; padding:0;}
+    .table-responsive th,
+    .table-responsive td{
+      display:table-cell; white-space:nowrap; padding:8px 6px; text-align:center; border-bottom:1px solid var(--line);
+      background:transparent; font-size:12px; vertical-align:middle;
     }
-    .table-responsive td.pos-cell{justify-content:flex-start;}
-    .table-responsive td.pos-cell::before{content:none;}
-    .table-responsive .pos-badge{margin-right:auto;}
+    .table-responsive thead th{
+      font-family:'Oswald',sans-serif; font-size:10px; letter-spacing:1.5px; text-transform:uppercase;
+      color:var(--gold-bright); background:#08170f; border-bottom:2px solid var(--gold); padding-top:10px; padding-bottom:10px;
+    }
+    .table-responsive td.left,
+    .table-responsive th.left{text-align:left;}
+    .table-responsive td::before,
+    .table-responsive th::before{content:none !important;}
+    .table-responsive tbody tr:hover{background:rgba(255,255,255,0.03);}
+    .table-responsive td.pos-cell,
+    .table-responsive th.pos-cell{width:36px; min-width:36px;}
+    .table-responsive .pos-badge{margin:0 auto;}
     .table-responsive .empty-note{padding:20px 6px;}
     .table-responsive tr:has(.empty-note){background:transparent; border:none; padding:0;}
+
     /* Detalle de partidos (goleadores/rojas) puede ser largo: que se lea bien apilado */
     #historialBody td[data-label="Detalle"]{flex-direction:column; align-items:flex-start; text-align:left;}
     #historialBody td[data-label="Detalle"]::before{margin-bottom:4px;}
